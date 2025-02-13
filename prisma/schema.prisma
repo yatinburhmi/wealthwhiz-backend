@@ -12,3 +12,114 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// User Table
+model User {
+  id            String            @id @default(uuid())
+  name          String
+  email         String            @unique
+  password      String
+  role          Role
+  accounts      Account[]
+  expenses      Expense[]
+  categories    ExpenseCategory[]
+  Households    Household[]
+  budgets       Budget[]
+  householdUser HouseholdUser[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+}
+
+// Enum for User Roles
+enum Role {
+  ADMIN
+  USER
+}
+
+// Household Table
+model Household {
+  id         String            @id @default(uuid())
+  name       String
+  adminId    String
+  admin      User              @relation(fields: [adminId], references: [id])
+  users      HouseholdUser[]
+  accounts   Account[]
+  expense    Expense[]
+  categories ExpenseCategory[]
+  budget     Budget[]
+  createdAt  DateTime          @default(now())
+}
+
+// HouseholdUser (Mapping table for many-to-many relation)
+model HouseholdUser {
+  id          String    @id @default(uuid())
+  userId      String
+  householdId String
+  user        User      @relation(fields: [userId], references: [id])
+  household   Household @relation(fields: [householdId], references: [id])
+  createdAt   DateTime  @default(now())
+
+  @@unique([userId, householdId]) // Prevent duplicate entries
+}
+
+// Account Table
+model Account {
+  id          String    @id @default(uuid())
+  userId      String
+  householdId String
+  name        String
+  balance     Float
+  user        User      @relation(fields: [userId], references: [id])
+  household   Household @relation(fields: [householdId], references: [id])
+  expenses    Expense[]
+  createdAt   DateTime  @default(now())
+}
+
+// Expense Category Table
+model ExpenseCategory {
+  id          String      @id @default(uuid())
+  userId      String
+  householdId String
+  name        String
+  type        ExpenseType // INCOME or EXPENSE
+  user        User        @relation(fields: [userId], references: [id])
+  household   Household   @relation(fields: [householdId], references: [id])
+  expenses    Expense[]
+  budget      Budget[]
+}
+
+// Enum for Expense Type
+enum ExpenseType {
+  INCOME
+  EXPENSE
+}
+
+// Expense Table
+model Expense {
+  id          String          @id @default(uuid())
+  userId      String
+  householdId String
+  accountId   String
+  categoryId  String
+  amount      Float
+  date        DateTime        @default(now())
+  description String?
+  user        User            @relation(fields: [userId], references: [id])
+  household   Household       @relation(fields: [householdId], references: [id])
+  account     Account         @relation(fields: [accountId], references: [id])
+  category    ExpenseCategory @relation(fields: [categoryId], references: [id])
+}
+
+// Budget Table
+model Budget {
+  id          String          @id @default(uuid())
+  userId      String
+  householdId String
+  categoryId  String
+  amount      Float
+  startDate   DateTime
+  endDate     DateTime
+  user        User            @relation(fields: [userId], references: [id])
+  household   Household       @relation(fields: [householdId], references: [id])
+  category    ExpenseCategory @relation(fields: [categoryId], references: [id])
+}
